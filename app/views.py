@@ -7,17 +7,6 @@ from app.scheduler import TaskScheduler, get_scheduler
 from datetime import datetime
 
 bp = Blueprint('tasks', __name__)
-scheduler = None
-
-
-def init_scheduler(app):
-    global scheduler
-    scheduler = TaskScheduler(app)
-    # 启动时重新加载所有活动任务
-    with app.app_context():
-        active_tasks = Task.query.filter_by(is_active=True).all()
-        for task in active_tasks:
-            scheduler.add_job(task)
 
 
 @bp.route('/')
@@ -296,6 +285,8 @@ def edit_task(task_id):
             task.updated_at = datetime.utcnow()
             db.session.commit()
 
+            scheduler = get_scheduler()
+            current_app.logger.info(f"Scheduler instance: {scheduler}")
             # 更新调度器
             if task.is_active:
                 if scheduler.update_job(task):
@@ -324,6 +315,8 @@ def toggle_task(task_id):
         flash('没有权限操作此任务', 'danger')
         return redirect(url_for('tasks.list_tasks'))
 
+    scheduler = get_scheduler()
+    current_app.logger.info(f"Scheduler instance: {scheduler}")
     try:
         task.is_active = not task.is_active
         db.session.commit()
@@ -356,6 +349,8 @@ def delete_task(task_id):
         flash('没有权限删除此任务', 'danger')
         return redirect(url_for('tasks.list_tasks'))
 
+    scheduler = get_scheduler()
+    current_app.logger.info(f"Scheduler instance: {scheduler}")
     try:
         # 从调度器中移除
         scheduler.remove_job(task.id)

@@ -1,6 +1,8 @@
 import os
 from datetime import timedelta
 
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+
 
 class Config:
     # 基础配置
@@ -36,6 +38,15 @@ class Config:
     TASK_TIMEOUT = 3600  # 1小时
     MAX_RETRIES = 3
     RETRY_DELAY = 300  # 5分钟
+
+
+    SCHEDULER_MAX_WORKERS = 20
+    SCHEDULER_COALESCE = False
+    SCHEDULER_MAX_INSTANCES = 1
+    SCHEDULER_MISFIRE_GRACE_TIME = 3600
+    SCHEDULER_JOBSTORES = {
+        'default': SQLAlchemyJobStore(url='sqlite:///jobs.sqlite')
+    }
 
     # 可选的其他调度器配置
     SCHEDULER_JOB_DEFAULTS = {
