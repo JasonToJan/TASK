@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>任务监控</h2>
+
+    <!-- 统计卡片 -->
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">总任务数</h5>
+                    <h2 class="card-text">{{ stats.total_tasks }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">活动任务</h5>
+                    <h2 class="card-text">{{ stats.active_tasks }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">总执行次数</h5>
+                    <h2 class="card-text">{{ stats.total_executions }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title">成功率</h5>
+                    <h2 class="card-text">{{ "%.2f"|format(stats.success_rate) }}%</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 最近执行记录 -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">最近执行记录</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>任务名称</th>
+                            <th>执行时间</th>
+                            <th>状态</th>
+                            <th>耗时</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in recent_logs %}
+                        <tr>
+                            <td>{{ log.task.name }}</td>
+                            <td>{{ log.start_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>
+                                <span class="badge badge-{{ 'success' if log.status == 'SUCCESS' else 'danger' }}">
+                                    {{ log.status }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if log.execution_time %}
+                                    {{ "%.2f"|format(log.execution_time) }}秒
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    // 自动刷新页面
+    setTimeout(function() {
+        location.reload();
+    }, 30000);  // 每30秒刷新一次
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>编辑任务</h2>
+    <form method="POST" enctype="multipart/form-data" class="mt-4">
+        <!-- 基本信息 -->
+        <div class="form-group">
+            <label for="name">任务名称</label>
+            <input type="text" class="form-control" id="name" name="name"
+                   value="{{ task.name }}" required maxlength="100">
+        </div>
+
+        <div class="form-group">
+            <label for="description">任务描述</label>
+            <textarea class="form-control" id="description" name="description"
+                      rows="3">{{ task.description }}</textarea>
+        </div>
+
+        <!-- 调度设置 -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">调度设置</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="schedule_type">调度类型</label>
+                    <select class="form-control" id="schedule_type" name="schedule_type">
+                        {% if task.schedule_type == 'once' %}
+                            <option value="once" selected>单次执行</option>
+                        {% else %}
+                            <option value="once">单次执行</option>
+                        {% endif %}
+
+                        {% if task.schedule_type == 'minutes' %}
+                            <option value="minutes" selected>按分钟</option>
+                        {% else %}
+                            <option value="minutes">按分钟</option>
+                        {% endif %}
+
+                        {% if task.schedule_type == 'hourly' %}
+                            <option value="hourly" selected>按小时</option>
+                        {% else %}
+                            <option value="hourly">按小时</option>
+                        {% endif %}
+
+                        {% if task.schedule_type == 'daily' %}
+                            <option value="daily" selected>按天</option>
+                        {% else %}
+                            <option value="daily">按天</option>
+                        {% endif %}
+
+                        {% if task.schedule_type == 'weekly' %}
+                            <option value="weekly" selected>按周</option>
+                        {% else %}
+                            <option value="weekly">按周</option>
+                        {% endif %}
+
+                        {% if task.schedule_type == 'monthly' %}
+                            <option value="monthly" selected>按月</option>
+                        {% else %}
+                            <option value="monthly">按月</option>
+                        {% endif %}
+
+                        {% if task.schedule_type == 'custom' %}
+                            <option value="custom" selected>自定义</option>
+                        {% else %}
+                            <option value="custom">自定义</option>
+                        {% endif %}
+                    </select>
+                </div>
+                <!-- 不同调度类型的配置选项 -->
+                <div id="schedule_configs">
+                    <!-- 单次执行 -->
+                    {% if task.schedule_type == 'once' %}
+                        <div class="schedule-config" id="once_config">
+                    {% else %}
+                        <div class="schedule-config" id="once_config" style="display: none;">
+                    {% endif %}
+                        <div class="form-group">
+                            <label for="once_datetime">执行时间</label>
+                            <input type="datetime-local" class="form-control" id="once_datetime" name="once_datetime"
+                                   value="{{ task.schedule_config.datetime if task.schedule_type == 'once' }}">
+                        </div>
+                    </div>
+
+                    <!-- 按分钟 -->
+                    {% if task.schedule_type == 'minutes' %}
+                        <div class="schedule-config" id="minutes_config">
+                    {% else %}
+                        <div class="schedule-config" id="minutes_config" style="display: none;">
+                    {% endif %}
+                        <div class="form-group">
+                            <label for="minutes_value">间隔分钟数</label>
+                            <input type="number" class="form-control" id="minutes_value" name="minutes_value"
+                                   value="{{ task.schedule_config.value if task.schedule_type == 'minutes' else '5' }}" min="1">
+                        </div>
+                    </div>
+
+                    <!-- 按小时 -->
+                    {% if task.schedule_type == 'hourly' %}
+                        <div class="schedule-config" id="hourly_config">
+                    {% else %}
+                        <div class="schedule-config" id="hourly_config" style="display: none;">
+                    {% endif %}
+                        <div class="form-group">
+                            <label for="hours_value">间隔小时数</label>
+                            <input type="number" class="form-control" id="hours_value" name="hours_value"
+                                   value="{{ task.schedule_config.value if task.schedule_type == 'hourly' else '1' }}" min="1">
+                        </div>
+                    </div>
+
+                    <!-- 按天 -->
+                    {% if task.schedule_type == 'daily' %}
+                        <div class="schedule-config" id="daily_config">
+                    {% else %}
+                        <div class="schedule-config" id="daily_config" style="display: none;">
+                    {% endif %}
+                        <div class="form-group">
+                            <label for="daily_time">执行时间</label>
+                            <input type="time" class="form-control" id="daily_time" name="daily_time"
+                                   value="{{ task.schedule_config.time if task.schedule_type == 'daily' else '00:00' }}">
+                        </div>
+                    </div>
+
+                    <!-- 按周 -->
+                    {% if task.schedule_type == 'weekly' %}
+                        <div class="schedule-config" id="weekly_config">
+                    {% else %}
+                        <div class="schedule-config" id="weekly_config" style="display: none;">
+                    {% endif %}
+                        <div class="form-group">
+                            <label for="week_day">星期几</label>
+                            <select class="form-control" id="week_day" name="week_day">
+                                {% for i in range(7) %}
+                                    {% if task.schedule_type == 'weekly' and task.schedule_config.day|int == i %}
+                                        <option value="{{ i }}" selected>{{ ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][i] }}</option>
+                                    {% else %}
+                                        <option value="{{ i }}">{{ ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][i] }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="weekly_time">执行时间</label>
+                            <input type="time" class="form-control" id="weekly_time" name="weekly_time"
+                                   value="{{ task.schedule_config.time if task.schedule_type == 'weekly' else '00:00' }}">
+                        </div>
+                    </div>
+
+                    <!-- 按月 -->
+                    {% if task.schedule_type == 'monthly' %}
+                        <div class="schedule-config" id="monthly_config">
+                    {% else %}
+                        <div class="schedule-config" id="monthly_config" style="display: none;">
+                    {% endif %}
+                        <div class="form-group">
+                            <label for="month_day">日期</label>
+                            <select class="form-control" id="month_day" name="month_day">
+                                {% for i in range(1, 32) %}
+                                    {% if task.schedule_type == 'monthly' and task.schedule_config.day|int == i %}
+                                        <option value="{{ i }}" selected>{{ i }}日</option>
+                                    {% else %}
+                                        <option value="{{ i }}">{{ i }}日</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="monthly_time">执行时间</label>
+                            <input type="time" class="form-control" id="monthly_time" name="monthly_time"
+                                   value="{{ task.schedule_config.time if task.schedule_type == 'monthly' else '00:00' }}">
+                        </div>
+                    </div>
+                    <!-- 自定义 -->
+                    {% if task.schedule_type == 'custom' %}
+                        <div class="schedule-config" id="custom_config">
+                    {% else %}
+                        <div class="schedule-config" id="custom_config" style="display: none;">
+                    {% endif %}
+                        <div class="form-group">
+                            <label for="cron_expression">Cron表达式</label>
+                            <input type="text" class="form-control" id="cron_expression" name="cron_expression"
+                                   value="{{ task.cron_expression }}" placeholder="分 时 日 月 周">
+                            <small class="form-text text-muted">
+                                格式: 分钟 小时 日期 月份 星期 (例如: 0 8 * * 1 表示每周一早上8点)
+                            </small>
+                        </div>
+                    </div>
+                </div> <!-- 结束 schedule_configs -->
+            </div> <!-- 结束 card-body -->
+        </div> <!-- 结束 card mb-3 调度设置 -->
+
+        <!-- 执行设置 -->
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label for="timeout">超时时间(秒)</label>
+                <input type="number" class="form-control" id="timeout"
+                       name="timeout" value="{{ task.timeout }}" min="1">
+            </div>
+            <div class="form-group col-md-6">
+                <label for="max_retries">最大重试次数</label>
+                <input type="number" class="form-control" id="max_retries"
+                       name="max_retries" value="{{ task.max_retries }}" min="0">
+            </div>
+        </div>
+
+        <!-- 脚本内容 -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">Python脚本</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <div class="custom-control custom-radio custom-control-inline">
+                        <input type="radio" id="editor_source" name="script_input_type"
+                               class="custom-control-input" value="editor"
+                               {% if task.script_source != 'file' %}checked{% endif %}>
+                        <label class="custom-control-label" for="editor_source">在线编辑</label>
+                    </div>
+                    <div class="custom-control custom-radio custom-control-inline">
+                        <input type="radio" id="file_source" name="script_input_type"
+                               class="custom-control-input" value="file"
+                               {% if task.script_source == 'file' %}checked{% endif %}>
+                        <label class="custom-control-label" for="file_source">上传文件</label>
+                    </div>
+                </div>
+
+                {% if task.original_filename %}
+                <div class="alert alert-info">
+                    当前脚本来自文件: {{ task.original_filename }}
+                </div>
+                {% endif %}
+
+                {% if task.script_source == 'file' %}
+                    <div id="editor_container" style="display: none;">
+                {% else %}
+                    <div id="editor_container">
+                {% endif %}
+                    <div id="editor" style="height: 400px;">{{ task.script_content|e }}</div>
+                    <textarea name="script_content" id="script_content" style="display: none;">{{ task.script_content|e }}</textarea>
+                </div>
+
+                {% if task.script_source != 'file' %}
+                    <div id="file_container" style="display: none;">
+                {% else %}
+                    <div id="file_container">
+                {% endif %}
+                    <div class="custom-file">
+                        <input type="file" class="custom-file-input" id="script_file" name="script_file" accept=".py">
+                        <label class="custom-file-label" for="script_file">选择Python文件</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">保存修改</button>
+            <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-secondary">返回</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

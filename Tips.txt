@@ -1,0 +1,25 @@
+task_scheduler/
+├── app/
+│   ├── __init__.py
+│   ├── models.py
+│   ├── scheduler.py
+│   ├── views.py
+│   ├── auth.py
+│   └── utils.py
+├── scripts/
+├── static/
+│   ├── css/
+│   │   └── style.css
+│   └── js/
+│       └── main.js
+├── templates/
+│   ├── base.html
+│   ├── auth/
+│   │   ├── login.html
+│   │   └── register.html
+│   └── tasks/
+│       ├── list.html
+│       ├── edit.html
+│       └── monitor.html
+├── config.py
+└── run.py

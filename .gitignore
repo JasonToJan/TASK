@@ -2,7 +2,7 @@
 venv/
 env/
 ENV/
-.env
+.flaskenv
 .venv
 env.bak/
 venv.bak/
@@ -32,7 +32,7 @@ build/
 .settings/
 
 # 本地开发配置
-.env
+.flaskenv
 .env.local
 *.sqlite3
 
