@@ -1,19 +1,12 @@
 from flask import Flask, render_template
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
 from config import config
 import logging
 from logging.handlers import RotatingFileHandler
 import os
-
-db = SQLAlchemy()
-login_manager = LoginManager()
-login_manager.login_view = 'auth.login'
-
+from app.extensions import db, login_manager
 
 def create_app(config_name='default'):
     app = Flask(__name__)
-    # 使用配置字典获取对应的配置类
     app.config.from_object(config[config_name])
 
     # 初始化扩展
@@ -50,15 +43,18 @@ def create_app(config_name='default'):
     if not app.config.get('TESTING'):  # 测试环境不初始化调度器
         if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
             try:
-                from app.views import init_scheduler, scheduler
+                from app.scheduler import init_scheduler, scheduler
                 with app.app_context():
-                    init_scheduler(app)
-                    app.logger.info('Task Scheduler initialized successfully')
+                    scheduler_instance = init_scheduler(app)
+                    if scheduler_instance:
+                        app.logger.info('Task Scheduler initialized successfully')
+                    else:
+                        app.logger.error('Failed to initialize Task Scheduler')
 
                     # 注册清理函数
                     @app.teardown_appcontext
                     def shutdown_scheduler(exception=None):
-                        if scheduler:
+                        if scheduler and hasattr(scheduler, 'scheduler') and scheduler.scheduler.running:
                             try:
                                 scheduler.shutdown()
                                 app.logger.info('Task Scheduler shut down successfully')
@@ -79,7 +75,9 @@ def create_app(config_name='default'):
             return ''
         return dict(format_datetime=format_datetime)
 
+    # 添加shell上下文
+    @app.shell_context_processor
+    def make_shell_context():
+        return {'db': db, 'scheduler': scheduler}
+
     return app
-
-
-from app import models  # 这行必须在最后

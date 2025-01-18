@@ -37,6 +37,12 @@ class Config:
     MAX_RETRIES = 3
     RETRY_DELAY = 300  # 5分钟
 
+    # 可选的其他调度器配置
+    SCHEDULER_JOB_DEFAULTS = {
+        'coalesce': False,
+        'max_instances': 3
+    }
+
     @staticmethod
     def init_app(app):
         # 确保日志目录存在

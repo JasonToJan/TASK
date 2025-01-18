@@ -1,9 +1,9 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
-from app import db
+from app.extensions import db
 from app.models import Task, TaskLog
 from app.utils import admin_required, validate_cron_expression, validate_script
-from app.scheduler import TaskScheduler
+from app.scheduler import TaskScheduler, get_scheduler
 from datetime import datetime
 
 bp = Blueprint('tasks', __name__)
@@ -160,7 +160,16 @@ def create_task():
                 db.session.add(task)
                 db.session.commit()
 
-                # 添加到调度器
+                # 添加调试日志
+                current_app.logger.info("Getting scheduler instance...")
+                scheduler = get_scheduler()
+                current_app.logger.info(f"Scheduler instance: {scheduler}")
+
+                if scheduler is None:
+                    current_app.logger.error("Scheduler is None - not properly initialized")
+                    flash('任务创建成功，但调度器未初始化', 'warning')
+                    return redirect(url_for('tasks.list_tasks'))
+
                 if scheduler.add_job(task):
                     flash('任务创建成功', 'success')
                 else:

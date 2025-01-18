@@ -1,5 +1,8 @@
+from app import  login_manager
+from app.extensions import db
 from datetime import datetime
-from app import db, login_manager
+
+
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 
