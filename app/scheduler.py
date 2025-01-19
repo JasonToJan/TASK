@@ -107,6 +107,15 @@ def get_scheduler():
         current_app.logger.error(f"Error reinitializing scheduler: {e}", exc_info=True)
         return None
 
+def execute_task_wrapper(task_id):
+    """
+    包装任务执行函数，确保在 Flask 应用上下文中运行
+    """
+    from app import flask_app  # 延迟导入
+    with flask_app.app_context():  # 添加括号，正确使用上下文
+        logger.info(f"Executing task {task_id} within Flask application context")
+        return execute_task(task_id)
+
 
 def execute_task(task_id):
     """
@@ -342,35 +351,43 @@ class TaskScheduler:
             try:
                 schedule_kwargs = self._parse_schedule(task)
             except ValueError as e:
-                self.logger.error(f"Schedule parsing failed for task {task.id}: {e}")
+                self.logger.error(f"Schedule parsing failed for task {task.id}: {e}. Config: {task.schedule_config}")
                 return False
 
             # 移除现有任务（如果存在）
-            try:
-                self.scheduler.remove_job(job_id)
-            except:
-                pass
+            if self.scheduler.get_job(job_id):
+                self.logger.info(f"Removing existing job {job_id}")
+                try:
+                    self.scheduler.remove_job(job_id)
+                except Exception as e:
+                    self.logger.error(f"Failed to remove existing job {job_id}: {e}", exc_info=True)
 
             # 添加新任务
-            job = self.scheduler.add_job(
-                func=execute_task,
-                args=[task.id],
-                id=job_id,
-                name=task.name,
-                replace_existing=True,
-                misfire_grace_time=task.timeout,
-                **schedule_kwargs
-            )
+            try:
+                from flask import current_app
+                job = self.scheduler.add_job(
+                    func=execute_task_wrapper,
+                    args=[task.id],
+                    id=job_id,
+                    name=task.name,
+                    replace_existing=True,
+                    misfire_grace_time=task.timeout,
+                    **schedule_kwargs
+                )
 
-            if job and (job.next_run_time or schedule_kwargs['trigger'] == 'date'):
-                self.logger.info(f"Job {job_id} added successfully. Next run at: {job.next_run_time}")
-                return True
-            else:
-                self.logger.error(f"Job {job_id} failed to schedule properly")
+                if job and (job.next_run_time or schedule_kwargs['trigger'] == 'date'):
+                    self.logger.info(f"Job {job_id} added successfully. Next run at: {job.next_run_time}")
+                    return True
+                else:
+                    self.logger.error(f"Job {job_id} failed to schedule properly")
+                    return False
+
+            except Exception as e:
+                self.logger.error(f"Failed to add job {job_id}: {e}", exc_info=True)
                 return False
 
         except Exception as e:
-            self.logger.error(f"Failed to add job: {str(e)}", exc_info=True)
+            self.logger.error(f"Unexpected error in add_job: {e}", exc_info=True)
             return False
 
     def remove_job(self, task_id):

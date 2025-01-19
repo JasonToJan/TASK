@@ -8,6 +8,8 @@ from app.scheduler import create_scheduler, validate_scheduler_config, TaskSched
 
 # 全局scheduler实例
 scheduler_instance = None
+# 使用全局 Flask 实例
+flask_app = None
 
 
 def init_scheduler_with_app(app):
@@ -57,8 +59,14 @@ def init_scheduler_with_app(app):
 
 
 def create_app(config_name='default'):
+    """创建 Flask 应用"""
+    global flask_app
+
     app = Flask(__name__)
     app.config.from_object(config[config_name])
+
+    # 绑定全局 Flask 实例
+    flask_app = app
 
     # 初始化扩展
     db.init_app(app)

@@ -1,5 +1,5 @@
 import os
-from app import create_app, db
+from app import create_app
 
 # 打印当前的 Python 路径
 import sys
