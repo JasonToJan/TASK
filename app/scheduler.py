@@ -119,19 +119,17 @@ def execute_task_wrapper(task_id):
 
 def execute_task(task_id):
     """
-    全局任务执行函数 - 必须在类外定义以确保可序列化
+    全局任务执行函数 - 动态共享所有依赖，执行任务脚本。
     """
     try:
         with current_app.app_context():
             logger.info(f"Starting execution of task {task_id}")
 
-            # 获取任务
             task = Task.query.get(task_id)
             if not task:
-                logger.error(f"Task {task_id} not found")
+                logger.error(f"Task {task_id} not found.")
                 return "Task not found", 'FAILED'
 
-            # 创建任务日志
             task_log = TaskLog(
                 task_id=task_id,
                 start_time=datetime.utcnow(),
@@ -139,44 +137,54 @@ def execute_task(task_id):
             )
             db.session.add(task_log)
             db.session.commit()
-
             start_time = time.time()
+
+            log_output = ""
+            error_message = None
+            status = 'FAILED'
             try:
-                # 执行前检查脚本内容
                 if not task.script_content:
                     raise ValueError("Script content is empty")
 
-                # 创建安全的执行环境
-                local_vars = {}
-                global_vars = {
-                    'logger': logger,
-                    'print': lambda *args: logger.info(' '.join(map(str, args)))
-                }
+                # 捕获脚本标准输出
+                import io
+                import sys
 
-                # 执行脚本
-                exec(task.script_content, global_vars, local_vars)
+                output_buffer = io.StringIO()
+                original_stdout = sys.stdout
+                sys.stdout = output_buffer  # 重定向标准输出
 
-                status = 'SUCCESS'
-                error_message = None
-                log_output = "Script executed successfully"
+                # 构建动态执行环境（统一作用域）
+                exec_scope = globals().copy()
+                exec_scope.update(sys.modules)
+                exec_scope['__builtins__'] = __builtins__
 
-            except Exception as e:
-                status = 'FAILED'
-                error_message = str(e)
-                log_output = f"Execution error: {str(e)}"
-                logger.error(f"Task {task_id} execution failed: {e}", exc_info=True)
+                try:
+                    logger.info(f"Executing script for task {task_id}")
+                    exec(task.script_content, exec_scope, exec_scope)  # 使用统一作用域
+                    status = 'SUCCESS'
+                    log_output = output_buffer.getvalue()
+                except Exception as script_exec_error:
+                    status = 'FAILED'
+                    log_output = output_buffer.getvalue()
+                    error_message = str(script_exec_error)
+                    logger.error(f"Failed to execute task {task_id}: {script_exec_error}")
+                finally:
+                    sys.stdout = original_stdout
 
-                # 处理重试逻辑
+            except Exception as general_error:
+                error_message = str(general_error)
+                log_output = f"Execution error: {error_message}"
+                logger.error(f"Task execution failed: {general_error}")
                 if task.max_retries > task.retry_count:
                     task.retry_count += 1
                     db.session.commit()
-                    # 这里可以添加重试调度逻辑
+                    logger.info(f"Retrying task {task_id}, attempt {task.retry_count}/{task.max_retries}")
 
             finally:
                 end_time = time.time()
                 execution_time = end_time - start_time
 
-                # 更新任务日志
                 try:
                     task_log.end_time = datetime.utcnow()
                     task_log.status = status
@@ -188,15 +196,19 @@ def execute_task(task_id):
                     task.last_status = status
 
                     db.session.commit()
-                except Exception as e:
-                    logger.error(f"Failed to update task log: {e}", exc_info=True)
+                    logger.info(f"Task {task_id} completed with status {status}")
+                except Exception as log_update_error:
+                    logger.error(f"Failed to update task log: {log_update_error}")
                     db.session.rollback()
 
             return log_output, status
+    except Exception as system_error:
+        logger.error(f"System error during task execution: {system_error}")
+        return f"System error: {str(system_error)}", 'FAILED'
 
-    except Exception as e:
-        logger.error(f"Task execution error: {e}", exc_info=True)
-        return f"System error: {str(e)}", 'FAILED'
+
+
+
 
 
 class TaskScheduler:
