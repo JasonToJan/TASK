@@ -15,6 +15,8 @@ from app.models import Task, TaskLog
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# 在文件开头添加
+BEIJING_TZ = pytz.timezone('Asia/Shanghai')
 
 class SchedulerError(Exception):
     """调度器异常"""
@@ -132,7 +134,7 @@ def execute_task(task_id):
 
             task_log = TaskLog(
                 task_id=task_id,
-                start_time=datetime.utcnow().replace(tzinfo=pytz.UTC).astimezone(pytz.timezone('Asia/Shanghai'))  ,
+                start_time=datetime.now(BEIJING_TZ),
                 status='RUNNING'
             )
             db.session.add(task_log)
@@ -186,13 +188,13 @@ def execute_task(task_id):
                 execution_time = end_time - start_time
 
                 try:
-                    task_log.end_time = datetime.utcnow().replace(tzinfo=pytz.UTC).astimezone(pytz.timezone('Asia/Shanghai'))
+                    task_log.end_time = datetime.now(BEIJING_TZ)
                     task_log.status = status
                     task_log.log_output = log_output
                     task_log.error_message = error_message
                     task_log.execution_time = execution_time
 
-                    task.last_run = datetime.utcnow().replace(tzinfo=pytz.UTC).astimezone(pytz.timezone('Asia/Shanghai'))
+                    task.last_run = datetime.now(BEIJING_TZ)
                     task.last_status = status
 
                     db.session.commit()
@@ -253,7 +255,7 @@ class TaskScheduler:
                 jobstores=jobstores,
                 executors=executors,
                 job_defaults=job_defaults,
-                timezone=pytz.timezone(app.config.get('SCHEDULER_TIMEZONE', 'UTC'))
+                timezone=BEIJING_TZ  # 直接使用北京时区
             )
 
             # 添加事件监听器
@@ -323,18 +325,25 @@ class TaskScheduler:
             self.logger.info(f"Job {event.job_id} executed successfully")
 
     def _parse_schedule(self, task):
-        """解析任务调度配置"""
         try:
             if task.schedule_type == 'once':
                 if not task.schedule_config or 'datetime' not in task.schedule_config:
                     raise ValueError("Missing datetime for one-time schedule")
+
+                    # 解析时间并转换为北京时间
                 dt = datetime.fromisoformat(task.schedule_config['datetime'])
-                if dt < datetime.now():
+                if not dt.tzinfo:
+                    dt = BEIJING_TZ.localize(dt)
+                elif dt.tzinfo != BEIJING_TZ:
+                    dt = dt.astimezone(BEIJING_TZ)
+
+                    # 与当前北京时间比较
+                if dt < datetime.now(BEIJING_TZ):
                     raise ValueError("Scheduled time is in the past")
                 return {'trigger': 'date', 'run_date': dt}
 
             else:
-                # 对于其他类型，使用cron表达式
+                # cron表达式部分保持不变
                 cron_parts = task.cron_expression.strip().split()
                 if len(cron_parts) not in [5, 6]:
                     raise ValueError("Invalid cron expression")
@@ -342,7 +351,6 @@ class TaskScheduler:
                 fields = ['minute', 'hour', 'day', 'month', 'day_of_week']
                 cron_kwargs = dict(zip(fields, cron_parts))
 
-                # 添加年份字段（如果存在）
                 if len(cron_parts) == 6:
                     cron_kwargs['year'] = cron_parts[5]
 
@@ -563,14 +571,14 @@ class TaskScheduler:
                 self.logger.error(f"Scheduler shutdown error: {e}", exc_info=True)
 
     def run_job_now(self, task_id):
-        """立即执行一次任务"""
         try:
             self._check_scheduler()
             job_id = f'task_{task_id}'
 
             job = self.scheduler.get_job(job_id)
             if job:
-                self.scheduler.modify_job(job_id, next_run_time=datetime.now())
+                # 使用北京时间
+                self.scheduler.modify_job(job_id, next_run_time=datetime.now(BEIJING_TZ))
                 self.logger.info(f"Job {job_id} scheduled for immediate execution")
                 return True
             return False
