@@ -1,3 +1,4 @@
+import pytz
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from app.extensions import db
@@ -282,7 +283,7 @@ def edit_task(task_id):
                 return redirect(url_for('tasks.edit_task', task_id=task_id))
 
             # 更新任务
-            task.updated_at = datetime.utcnow()
+            task.updated_at = datetime.utcnow().replace(tzinfo=pytz.UTC).astimezone(pytz.timezone('Asia/Shanghai'))
             db.session.commit()
 
             scheduler = get_scheduler()

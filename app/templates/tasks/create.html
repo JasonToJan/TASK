@@ -212,16 +212,23 @@ function updateFileLabel(input) {
     // 预览文件内容
     const reader = new FileReader();
     reader.onload = function(e) {
+        // 更新文件预览区域
         document.getElementById('file-preview').style.display = 'block';
         document.getElementById('file-content').textContent = e.target.result;
+
+        // 同步内容到在线编辑器
+        editor.setValue(e.target.result, -1); // -1表示将光标移到开始位置
     };
     reader.readAsText(input.files[0]);
 }
 
+// 清除文件时也需要清除编辑器内容
 function clearFilePreview() {
     document.getElementById('script_file').value = '';
     document.getElementById('file-preview').style.display = 'none';
     document.querySelector('.custom-file-label').textContent = '选择Python脚本文件...';
+    // 清除编辑器内容
+    editor.setValue('', -1);
 }
 
 // 处理执行计划选项的显示/隐藏
@@ -238,6 +245,10 @@ document.getElementById('schedule_type').addEventListener('change', function() {
 
 // 表单提交处理
 document.querySelector('form').onsubmit = function() {
+    // 无论是哪个标签页活动，都使用编辑器的内容
+    // 因为编辑器内容可能是用户修改过的
+    document.getElementById('script_content').value = editor.getValue();
+
     // 如果在使用在线编辑器，同步内容到隐藏的textarea
     if (document.querySelector('#editor-tab').classList.contains('active')) {
         document.getElementById('script_content').value = editor.getValue();

@@ -261,3 +261,116 @@
     </form>
 </div>
 {% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+<script>
+// 初始化在线编辑器
+var editor = ace.edit("editor");
+editor.setTheme("ace/theme/monokai");
+editor.session.setMode("ace/mode/python");
+editor.setOptions({
+    fontSize: "12pt"
+});
+
+// 处理调度类型切换
+document.getElementById('schedule_type').addEventListener('change', function() {
+    // 隐藏所有配置选项
+    document.querySelectorAll('.schedule-config').forEach(function(el) {
+        el.style.display = 'none';
+    });
+
+    // 显示选中的配置选项
+    var selectedConfig = document.getElementById(this.value + '_config');
+    if (selectedConfig) {
+        selectedConfig.style.display = 'block';
+    }
+});
+
+// 处理脚本输入方式切换
+document.querySelectorAll('input[name="script_input_type"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        if (this.value === 'editor') {
+            document.getElementById('editor_container').style.display = 'block';
+            document.getElementById('file_container').style.display = 'none';
+        } else {
+            document.getElementById('editor_container').style.display = 'none';
+            document.getElementById('file_container').style.display = 'block';
+        }
+    });
+});
+
+// 处理文件上传
+document.getElementById('script_file').addEventListener('change', function(e) {
+    const file = this.files[0];
+    if (file) {
+        // 更新文件名显示
+        const fileName = file.name;
+        this.nextElementSibling.textContent = fileName;
+
+        // 读取文件内容
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // 更新编辑器内容
+            editor.setValue(e.target.result, -1);
+            // 自动切换到编辑器模式
+            document.getElementById('editor_source').checked = true;
+            document.getElementById('editor_container').style.display = 'block';
+            document.getElementById('file_container').style.display = 'none';
+        };
+        reader.readAsText(file);
+    }
+});
+
+// 表单提交前处理
+document.querySelector('form').addEventListener('submit', function(e) {
+    // 同步编辑器内容到隐藏的textarea
+    document.getElementById('script_content').value = editor.getValue();
+});
+
+// 自定义文件输入样式
+document.querySelector('.custom-file-input').addEventListener('change', function(e) {
+    var fileName = this.files[0].name;
+    var next = this.nextElementSibling;
+    next.innerHTML = fileName;
+});
+
+// 初始化调度类型显示
+window.onload = function() {
+    var scheduleType = document.getElementById('schedule_type').value;
+    document.querySelectorAll('.schedule-config').forEach(function(el) {
+        el.style.display = 'none';
+    });
+    var selectedConfig = document.getElementById(scheduleType + '_config');
+    if (selectedConfig) {
+        selectedConfig.style.display = 'block';
+    }
+};
+</script>
+
+<style>
+#editor {
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.custom-file-label::after {
+    content: "浏览";
+}
+
+.card {
+    margin-bottom: 1rem;
+}
+
+.schedule-config {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.custom-radio {
+    margin-bottom: 1rem;
+}
+</style>
+{% endblock %}

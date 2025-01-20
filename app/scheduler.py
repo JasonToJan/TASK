@@ -132,7 +132,7 @@ def execute_task(task_id):
 
             task_log = TaskLog(
                 task_id=task_id,
-                start_time=datetime.utcnow(),
+                start_time=datetime.utcnow().replace(tzinfo=pytz.UTC).astimezone(pytz.timezone('Asia/Shanghai'))  ,
                 status='RUNNING'
             )
             db.session.add(task_log)
@@ -186,13 +186,13 @@ def execute_task(task_id):
                 execution_time = end_time - start_time
 
                 try:
-                    task_log.end_time = datetime.utcnow()
+                    task_log.end_time = datetime.utcnow().replace(tzinfo=pytz.UTC).astimezone(pytz.timezone('Asia/Shanghai'))
                     task_log.status = status
                     task_log.log_output = log_output
                     task_log.error_message = error_message
                     task_log.execution_time = execution_time
 
-                    task.last_run = datetime.utcnow()
+                    task.last_run = datetime.utcnow().replace(tzinfo=pytz.UTC).astimezone(pytz.timezone('Asia/Shanghai'))
                     task.last_status = status
 
                     db.session.commit()
